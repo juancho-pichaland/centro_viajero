@@ -37,6 +37,9 @@ def _build_user_context(db: Session, user: Usuario) -> dict:
             'usuario_nombre': user.nombre,
             'viaje': None,
             'tareas': [],
+            'plan': [],
+            'presupuesto_total': 0,
+            'presupuesto_detallado': {},
             'tareas_pendientes': 0,
         }
 
@@ -46,6 +49,9 @@ def _build_user_context(db: Session, user: Usuario) -> dict:
         .order_by(Tarea.id.asc())
     ).all()
 
+    plan = viaje.plan or []
+    presupuesto_detallado = viaje.presupuesto_detallado or {}
+
     return {
         'usuario_nombre': user.nombre,
         'viaje': {
@@ -54,7 +60,13 @@ def _build_user_context(db: Session, user: Usuario) -> dict:
             'estado': viaje.estado,
             'fecha_inicio': viaje.fecha_inicio.isoformat() if viaje.fecha_inicio else None,
             'fecha_fin': viaje.fecha_fin.isoformat() if viaje.fecha_fin else None,
+            'clima_recomendado': viaje.clima_recomendado,
+            'transporte_recomendado': viaje.transporte_recomendado,
+            'descripcion': viaje.descripcion,
         },
+        'plan': plan,
+        'presupuesto_total': int(viaje.presupuesto_total or 0),
+        'presupuesto_detallado': presupuesto_detallado,
         'tareas': [
             {'titulo': tarea.titulo, 'categoria': tarea.categoria, 'completada': tarea.completada}
             for tarea in tareas
@@ -73,11 +85,21 @@ def _call_ollama(message: str, context: dict | None = None) -> str:
     if context:
         viaje = context.get('viaje')
         tareas = context.get('tareas', [])
+        plan = context.get('plan') or []
+        presupuesto_total = context.get('presupuesto_total')
+        presupuesto_detallado = context.get('presupuesto_detallado') or {}
         partes = [f"Usuario: {context.get('usuario_nombre', 'viajero')}"]
         if viaje:
             partes.append(
-                f"Viaje actual: {viaje.get('titulo')} ({viaje.get('destino')}) | estado: {viaje.get('estado')} | fechas: {viaje.get('fecha_inicio')} a {viaje.get('fecha_fin')}"
+                f"Viaje actual: {viaje.get('titulo')} ({viaje.get('destino')}) | estado: {viaje.get('estado')} | fechas: {viaje.get('fecha_inicio')} a {viaje.get('fecha_fin')} | clima: {viaje.get('clima_recomendado')} | transporte: {viaje.get('transporte_recomendado')}"
             )
+        if plan:
+            primer_dia = plan[0]
+            actividades = ', '.join((primer_dia.get('activities') or [])[:3])
+            partes.append(f"Plan del viaje: Día {primer_dia.get('day', 1)} - {primer_dia.get('title')}. Actividades: {actividades}")
+        if presupuesto_total:
+            categorias = ', '.join(f"{k}: {v}" for k, v in list(presupuesto_detallado.items())[:3])
+            partes.append(f"Presupuesto total: {presupuesto_total}; desglose: {categorias}")
         if tareas:
             pendientes = [t['titulo'] for t in tareas if not t.get('completada')]
             if pendientes:
@@ -115,19 +137,44 @@ def _build_reply(message: str, current_user: Usuario | None = None, context: dic
         pass
 
     text = message.lower().strip()
+    viaje = context.get('viaje') if context else None
+    tareas_pendientes = context.get('tareas', []) if context else []
+    pendientes = [item.get('titulo', 'Tarea pendiente') for item in tareas_pendientes if not item.get('completada', False)]
+    plan = context.get('plan') if context else []
+    presupuesto_total = context.get('presupuesto_total') if context else 0
+    presupuesto_detallado = context.get('presupuesto_detallado') or {} if context else {}
 
     if context and context.get('viaje'):
         viaje = context['viaje']
+        next_stage = (plan[0] if plan else None)
+        if any(keyword in text for keyword in ['hoy', 'siguiente', 'próximo', 'proximo', 'qué hago', 'que hago', 'ahora']):
+            if next_stage:
+                activities = next_stage.get('activities') or []
+                focus = activities[0] if activities else (pendientes[0] if pendientes else 'confirmar documentos')
+                budget_hint = f"Tu presupuesto total es {presupuesto_total} COP." if presupuesto_total else 'Tu presupuesto está bien definido para esta etapa.'
+                return ChatMessageResponse(
+                    reply=f'Para hoy en {viaje["destino"]}, prioriza el día {next_stage.get("day", 1)}: {next_stage.get("title", "tu plan")}. Enfócate en {focus}. {budget_hint} Revisa también los gastos principales para que no se te salga la ruta de emergencia.',
+                    suggestions=['Revisar presupuesto', 'Checklist del día', 'Qué hacer hoy']
+                )
+
         if any(keyword in text for keyword in ['documento', 'pasaporte', 'visa', 'identidad', 'requisitos']):
             return ChatMessageResponse(
-                reply=f'Para {viaje["titulo"]}, lo más importante es revisar documentos, reserva, seguro y copias digitales antes de salir. También conviene compartir los datos de emergencia con alguien de confianza.',
+                reply=f'Para {viaje["titulo"]}, antes de salir revisa pasaporte, visa si aplica, seguro y copias digitales de cada documento. Si te quedan tareas como {pendientes[0] if pendientes else "confirmar reservas"}, priorízalas para reducir estrés antes del viaje. Tu plan actual del día {next_stage.get("day", 1) if next_stage else 1} ya te da una ruta útil para la preparación.',
                 suggestions=['Checklist de documentos', 'Seguro de viaje', 'Documentos de viaje']
             )
 
-        if any(keyword in text for keyword in ['maleta', 'equipaje', 'ropa', 'llevar']):
+        if any(keyword in text for keyword in ['maleta', 'equipaje', 'ropa', 'llevar', 'mochila']):
+            focus = pendientes[0] if pendientes else 'confirmar transporte y alojamiento'
             return ChatMessageResponse(
-                reply=f'Para tu viaje a {viaje["destino"]}, lleva ropa según el clima, calzado cómodo y una mochila pequeña para excursiones. No olvides medicinas, cargadores y una copia de tus documentos.',
+                reply=f'Para tu viaje a {viaje["destino"]}, en la maleta pon ropa según el clima, calzado cómodo, medicinas, cargadores y una copia de tus documentos. También revisa {focus} para dejar la preparación más ordenada. Si quieres, hoy puedes seguir el plan del día {next_stage.get("day", 1) if next_stage else 1}.',
                 suggestions=['Qué llevar en la maleta', 'Clima del destino', 'Preparación del equipaje']
+            )
+
+        if any(keyword in text for keyword in ['presupuesto', 'dinero', 'gasto', 'costo', 'coste', 'tarjeta', 'efectivo']):
+            summary = ', '.join(f'{name}: {value}' for name, value in list(presupuesto_detallado.items())[:3]) or 'sin desglose aún'
+            return ChatMessageResponse(
+                reply=f'Tu presupuesto total para {viaje["destino"]} es {presupuesto_total} COP. El desglose principal es {summary}. Mantén ese margen para alojamiento, transporte y actividades para que el viaje se mantenga real y cómodo.',
+                suggestions=['Revisar presupuesto', 'Control de gastos', 'Qué priorizar']
             )
 
     if any(keyword in text for keyword in ['documento', 'pasaporte', 'visa', 'identidad']):
@@ -136,7 +183,7 @@ def _build_reply(message: str, current_user: Usuario | None = None, context: dic
             suggestions=['Checklist de documentos', 'Seguridad en ruta', 'Qué llevar en la maleta']
         )
 
-    if any(keyword in text for keyword in ['maleta', 'equipaje', 'ropa', 'llevar']):
+    if any(keyword in text for keyword in ['maleta', 'equipaje', 'ropa', 'llevar', 'mochila']):
         return ChatMessageResponse(
             reply='Para la maleta, prioriza lo esencial: documentos, medicinas, cargadores, ropa por clima, calzado cómodo y una pequeña mochila para día a día. Si viajas con hijos o en temporada alta, revisa el pronóstico del destino.',
             suggestions=['Qué llevar según clima', 'Preparación del día de salida', 'Cómo organizar la maleta']
@@ -167,9 +214,16 @@ def _build_reply(message: str, current_user: Usuario | None = None, context: dic
         )
 
     if context and context.get('tareas_pendientes', 0):
+        focus = pendientes[0] if pendientes else 'documentos y reservas'
         return ChatMessageResponse(
-            reply=f'Veo que te quedan {context["tareas_pendientes"]} tareas pendientes antes del viaje. Te recomiendo enfocarte primero en documentos, reserva y transporte para reducir el estrés.',
+            reply=f'Veo que te quedan {context["tareas_pendientes"]} tareas pendientes antes del viaje. En este momento, prioriza {focus} para que la salida sea más tranquila.',
             suggestions=['Checklist de viaje', 'Tareas pendientes', 'Preparación del destino']
+        )
+
+    if viaje:
+        return ChatMessageResponse(
+            reply=f'Para tu próximo viaje a {viaje["destino"]}, te recomiendo organizar primero documentos, clima, transporte y reserva de alojamiento. Eso te da una salida más clara y con menos improvisación.',
+            suggestions=['Checklist de documentos', 'Qué llevar en la maleta', 'Seguridad y emergencia']
         )
 
     return ChatMessageResponse(

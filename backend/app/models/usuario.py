@@ -8,3 +8,4 @@ class Usuario(Base):
     nombre = Column(String, nullable=False)
     email = Column(String, unique=True, index=True, nullable=False)
     password_hash = Column(String, nullable=False)
+    rol = Column(String, nullable=False, default='traveler', server_default='traveler')

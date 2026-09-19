@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { apiFetch } from '../api/client'
 
 const starterMessages = [
@@ -17,8 +17,35 @@ export default function Chatbot() {
   const [messages, setMessages] = useState(starterMessages)
   const [draft, setDraft] = useState('')
   const [isSending, setIsSending] = useState(false)
+  const [travelContext, setTravelContext] = useState({ trip: null, tasks: [] })
+  const [suggestions, setSuggestions] = useState(quickPicks)
+
+  useEffect(() => {
+    const loadContext = async () => {
+      try {
+        const [tripResponse, tasksResponse] = await Promise.all([
+          apiFetch('/viajes/'),
+          apiFetch('/tareas/')
+        ])
+
+        const trips = await tripResponse.json()
+        const tasks = await tasksResponse.json()
+        setTravelContext({ trip: trips[0] || null, tasks })
+      } catch (error) {
+        setTravelContext({ trip: null, tasks: [] })
+      }
+    }
+
+    loadContext()
+  }, [])
 
   const assistantName = useMemo(() => 'Centro Viajero', [])
+  const travelFocus = useMemo(() => {
+    if (!travelContext.trip) return ['Documentos', 'Equipaje', 'Seguridad']
+
+    const pending = travelContext.tasks.filter((task) => !task.completada).slice(0, 3)
+    return pending.length > 0 ? pending.map((task) => task.titulo) : ['Documentos', 'Alojamiento', 'Transporte']
+  }, [travelContext])
 
   const sendMessage = async (message) => {
     const trimmed = message.trim()
@@ -36,6 +63,9 @@ export default function Chatbot() {
       })
       const payload = await response.json()
       setMessages((current) => [...current, { role: 'bot', text: payload.reply }])
+      if (payload.suggestions?.length) {
+        setSuggestions(payload.suggestions)
+      }
     } catch (error) {
       setMessages((current) => [...current, { role: 'bot', text: 'No pude responder en este momento. Inténtalo de nuevo en unos segundos.' }])
     } finally {
@@ -56,7 +86,7 @@ export default function Chatbot() {
       <section className="chat-window">
         <div className="chat-header">
           <div className="chat-brand"><span>{assistantName.slice(0, 2).toUpperCase()}</span><strong>{assistantName}</strong></div>
-          <small>Disponible para ayudarte</small>
+          <small>{travelContext.trip ? `Preparando ${travelContext.trip.destino}` : 'Disponible para ayudarte'}</small>
         </div>
 
         <div className="chat-body">
@@ -68,7 +98,7 @@ export default function Chatbot() {
         </div>
 
         <div className="quick-picks">
-          {quickPicks.map((item) => (
+          {suggestions.map((item) => (
             <button key={item} type="button" onClick={() => sendMessage(item)} disabled={isSending}>{item}</button>
           ))}
         </div>
@@ -91,12 +121,11 @@ export default function Chatbot() {
 
       <aside className="tip-panel chat-panel">
         <span className="tip-label">TUS PRIORIDADES</span>
-        <h3>Todo lo importante en una sola conversación.</h3>
+        <h3>{travelContext.trip ? `Tu viaje a ${travelContext.trip.destino}` : 'Todo lo importante en una sola conversación.'}</h3>
         <ul className="chat-checklist">
-          <li>Documentos y permisos</li>
-          <li>Equipaje y clima</li>
-          <li>Transporte y horarios</li>
-          <li>Seguridad y emergencia</li>
+          {travelFocus.slice(0, 4).map((item) => (
+            <li key={item}>{item}</li>
+          ))}
         </ul>
       </aside>
     </div>

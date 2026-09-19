@@ -8,6 +8,7 @@ import Checklist from './pages/Checklist'
 import CentroInformacion from './pages/CentroInformacion'
 import Chatbot from './pages/Chatbot'
 import Solicitudes from './pages/Solicitudes'
+import Operaciones from './pages/Operaciones'
 
 function ProtectedRoute({ children }) {
   const token = getToken()
@@ -39,6 +40,7 @@ function AppShell() {
           <NavLink to="/centro">Centro de información</NavLink>
           <NavLink to="/chatbot">Orientación</NavLink>
           <NavLink to="/solicitudes">Solicitudes</NavLink>
+          <NavLink to="/operaciones">Operaciones</NavLink>
         </nav>
         <div className="sidebar-footer"><span className="status-dot" /> Atención disponible</div>
       </aside>
@@ -52,6 +54,7 @@ function AppShell() {
           <Route path='/centro' element={<ProtectedRoute><CentroInformacion/></ProtectedRoute>} />
           <Route path='/chatbot' element={<ProtectedRoute><Chatbot/></ProtectedRoute>} />
           <Route path='/solicitudes' element={<ProtectedRoute><Solicitudes/></ProtectedRoute>} />
+          <Route path='/operaciones' element={<ProtectedRoute><Operaciones/></ProtectedRoute>} />
         </Routes>
       </main>
     </div>

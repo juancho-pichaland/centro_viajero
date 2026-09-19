@@ -8,8 +8,8 @@ services:
       POSTGRES_DB: centro_viajero
     volumes:
       - db_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    expose:
+      - "5432"
 
   backend:
     build:
@@ -18,8 +18,12 @@ services:
     depends_on:
       - db
     environment:
+      APP_ENV: ${APP_ENV:-development}
       DATABASE_URL: postgresql://postgres:postgres@db:5432/centro_viajero
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://127.0.0.1:5173}
+      RATE_LIMIT_WINDOW_SECONDS: ${RATE_LIMIT_WINDOW_SECONDS:-60}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-120}
     ports:
       - "8000:8000"
     volumes:

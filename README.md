@@ -232,6 +232,18 @@ Antes de usarlo fuera de desarrollo:
 - No uses modelos o endpoint de Ollama con configuración insegura
 - Considera variables de entorno específicas por entorno (dev, staging, prod)
 
+### Seguridad de despliegue
+
+Este repositorio incluye controles para reforzar la entrega a producción:
+
+- CI/CD con validación automática: pruebas del backend, build del frontend y escaneo de integridad
+- Análisis de dependencias: Dependabot + `pip-audit` + `npm audit`
+- Escaneo de vulnerabilidades: revisión de secretos con Gitleaks
+- Revisión manual antes de producción: el workflow `production-gate.yml` usa un entorno `production` que exige aprobación del responsable de despliegue
+- Hardening: contenedores sin usuario root y política de actualización de dependencias
+
+Se puede consultar la guía detallada en [SECURITY.md](SECURITY.md) y el procedimiento de patching en [PATCHING.md](PATCHING.md).
+
 ## Créditos y propósito
 
 Este proyecto funciona como ejemplo de una plataforma inteligente para viajes, con una propuesta de producto enfocada en preparación, tranquilidad y asistencia para viajeros. Sirve como base para ampliar módulos como:

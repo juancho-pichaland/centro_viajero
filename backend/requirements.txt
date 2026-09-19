@@ -6,3 +6,4 @@ pydantic
 email-validator
 PyJWT
 pytest
+sentry-sdk

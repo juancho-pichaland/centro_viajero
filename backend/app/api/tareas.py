@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..core.audit import log_audit_event
 from ..db.dependencies import get_current_user, get_db
 from ..models import Tarea, Usuario, Viaje
 from ..schemas.tareas import TareaResponse
@@ -25,4 +26,5 @@ def toggle_tarea(tarea_id: int, current_user: Usuario = Depends(get_current_user
     tarea.completada = not tarea.completada
     db.commit()
     db.refresh(tarea)
+    log_audit_event('task_toggled', current_user.id, {'task_id': tarea.id, 'completed': tarea.completada})
     return tarea

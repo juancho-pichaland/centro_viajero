@@ -22,6 +22,7 @@ def initialize_database() -> None:
                 nombre="Juan García",
                 email="juan@centro.viajero",
                 password_hash=hash_password("viajero123"),
+                rol="admin",
             )
             db.add(user)
             db.flush()
@@ -30,9 +31,21 @@ def initialize_database() -> None:
         if trip is None:
             trip = Viaje(
                 titulo="Ruta por el Eje Cafetero",
-                destino="Colombia",
+                destino="Medellín",
+                descripcion="Plan de salida con pueblos, cafés y recorridos urbanos tranquilos.",
                 fecha_inicio=date(2026, 10, 12),
                 fecha_fin=date(2026, 10, 20),
+                estado="En preparación",
+                clima_recomendado="Templado y fresco",
+                transporte_recomendado="Bus intermunicipal + transporte local",
+                presupuesto_total=1400000,
+                presupuesto_detallado={"hospedaje": 550000, "transporte": 250000, "alimentacion": 300000, "actividades": 300000},
+                dias_recomendados=["Día 1: llegada y descanso", "Día 2: pueblos y cafés", "Día 3: rutas verdes y cultura"],
+                plan=[
+                    {"day": 1, "title": "Preparación para Medellín", "summary": "Confirma documentos, alojamiento y transporte de llegada.", "activities": ["Confirmar reserva", "Revisar documentos", "Guardar contactos de emergencia"]},
+                    {"day": 2, "title": "Ruta principal del destino", "summary": "Medellín reclama recorridos tranquilos y transporte cómodo entre zonas.", "activities": ["Confirmar traslados", "Definir puntos de interés", "Usar calzado cómodo"]},
+                    {"day": 3, "title": "Cierre del plan", "summary": "Deja margen para actividades libres y revisión del presupuesto.", "activities": ["Revisar gastos", "Confirmar salida", "Guardar copias digitales"]},
+                ],
                 usuario_id=user.id,
             )
             db.add(trip)

@@ -1,13 +1,17 @@
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
-# copy package manifests first to leverage Docker cache
+RUN addgroup -S app && adduser -S app -G app
+
 COPY package.json package-lock.json* ./
-RUN npm install --include=optional \
-	&& npm install --no-save @rollup/rollup-linux-x64-musl
+RUN npm install --include=optional --no-fund --no-audit \
+    && npm install --no-save --no-fund --no-audit @rollup/rollup-linux-x64-musl
 
 COPY . .
+RUN chown -R app:app /app
+
+USER app
 
 EXPOSE 5173
 

@@ -46,9 +46,16 @@ CREATE TABLE IF NOT EXISTS viajes (
   id SERIAL PRIMARY KEY,
   titulo TEXT NOT NULL,
   destino TEXT NOT NULL,
+  descripcion TEXT,
   fecha_inicio DATE NOT NULL,
   fecha_fin DATE NOT NULL,
   estado TEXT NOT NULL DEFAULT 'En preparación',
+  clima_recomendado TEXT NOT NULL DEFAULT 'Templado',
+  transporte_recomendado TEXT NOT NULL DEFAULT 'Aéreo + transporte local',
+  presupuesto_total INTEGER NOT NULL DEFAULT 0,
+  presupuesto_detallado JSONB NOT NULL DEFAULT '{}',
+  dias_recomendados JSONB NOT NULL DEFAULT '[]',
+  plan JSONB NOT NULL DEFAULT '[]',
   usuario_id INTEGER NOT NULL REFERENCES usuarios(id)
 );
 

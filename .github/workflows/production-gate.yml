@@ -1,0 +1,25 @@
+name: Producción con aprobación manual
+
+on:
+  workflow_dispatch:
+
+jobs:
+  production-approval:
+    name: Revisión manual antes de producción
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://example.com
+
+    steps:
+      - name: Chequear código
+        uses: actions/checkout@v4
+
+      - name: Validación final de preparación
+        run: |
+          echo "Este workflow requiere aprobación manual del responsable de despliegue."
+          echo "Se debe verificar: changelog, vulnerabilidades, pruebas, variables de entorno y revisión del PR."
+
+      - name: Despliegue controlado
+        run: |
+          echo "Despliegue autorizado solo tras aprobación manual y validación final."

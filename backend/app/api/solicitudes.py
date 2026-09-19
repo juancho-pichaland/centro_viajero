@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from ..core.audit import log_audit_event
 from ..db.dependencies import get_current_user, get_db
 from ..models import Solicitud, Usuario
 from ..schemas.solicitudes import SolicitudCreate, SolicitudResponse
@@ -20,6 +21,7 @@ def create_solicitud(payload: SolicitudCreate, current_user: Usuario = Depends(g
     db.add(solicitud)
     db.commit()
     db.refresh(solicitud)
+    log_audit_event('request_created', current_user.id, {'request_id': solicitud.id, 'category': solicitud.categoria, 'priority': solicitud.prioridad})
     return solicitud
 
 
