@@ -232,6 +232,10 @@ Antes de usarlo fuera de desarrollo:
 - No uses modelos o endpoint de Ollama con configuración insegura
 - Considera variables de entorno específicas por entorno (dev, staging, prod)
 
+### Despliegue en VPS
+
+El proyecto incluye una preparación base para despliegue en un servidor VPS. Consulta [DEPLOY_VPS.md](DEPLOY_VPS.md) y usa [scripts/deploy-vps.sh](scripts/deploy-vps.sh) para automatizar la instalación de Docker, firewall, certificados TLS y arranque de la app en producción.
+
 ### Seguridad de despliegue
 
 Este repositorio incluye controles para reforzar la entrega a producción:
