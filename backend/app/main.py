@@ -1,14 +1,20 @@
+from collections.abc import AsyncIterator
+
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .api import alertas, articulos, auth, chatbot, destinos, faqs, solicitudes, tareas, usuarios, viajes
 from .db.init import initialize_database
 
-app = FastAPI(title="Centro Viajero API")
 
-
-@app.on_event("startup")
-def startup() -> None:
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     initialize_database()
+    yield
+
+
+app = FastAPI(title="Centro Viajero API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
