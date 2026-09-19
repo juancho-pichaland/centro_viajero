@@ -13,7 +13,7 @@ jobs:
 
     steps:
       - name: Chequear código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Validación final de preparación
         run: |
